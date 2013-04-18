@@ -8,29 +8,21 @@ import java.util.concurrent.TimeUnit;
 
 public class Sender implements Runnable{
 
-	
-	private static final String LOCAL_NODE_IP = "130.126.31.48";
-	private static final int LOCAL_NODE_PORT = 10102;
-	
 	private Socket sock;
 	protected ObjectOutputStream os;
 	private final BlockingQueue queue;
 	
 	
-	public Sender(int capacity){
+	public Sender(int capacity, Socket sock){
 		queue = new ArrayBlockingQueue(capacity);
-	}
-	
-	private void openSocket(){
+		this.sock = sock;
 		try {
-			sock = new Socket(LOCAL_NODE_IP, LOCAL_NODE_PORT);
 			os = new ObjectOutputStream(sock.getOutputStream());
-		} catch ( IOException e) {
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
 	
 	private void send(Object obj){
 		try {
@@ -41,7 +33,7 @@ public class Sender implements Runnable{
 		}
 	}
 	
-	public void addToQueue(Object obj){
+	public void addToMessageQueue(Object obj){
 		try {
 			queue.put(obj);
 		} catch (InterruptedException e) {
@@ -52,7 +44,6 @@ public class Sender implements Runnable{
 	private void closeSocket(){
 		try {
 			os.close();
-			sock.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -61,7 +52,6 @@ public class Sender implements Runnable{
 	
 	@Override
 	public void run() {
-		openSocket();
 		
 		Object obj = null;
 		while(true){

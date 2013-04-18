@@ -12,17 +12,20 @@ import java.net.Socket;
  */
 public class DataListener extends Listener{
 
+	private static final int PORT_NUM = 10102;
 	private final TransferManager manager;
 	
 	public DataListener(TransferManager manager){
-		super();
+		super(PORT_NUM);
 		
 		this.manager = manager;
 	}
 	
 	private void bootstrap(){
 		int left[][] = (int [][]) readObject();
-		int right[][] = (int [][])readObject();		
+		int right[][] = (int [][])readObject();
+		
+		
 	}
 
 	@Override

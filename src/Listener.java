@@ -7,24 +7,27 @@ import java.net.Socket;
 public abstract class Listener implements Runnable{
 
 	
-	private static final int PORT_NUM = 10102;
 	private ServerSocket service;
 	private Socket sock;
 	private ObjectInputStream is;
+	private final int portNum;
 	
+	public Listener(int portNum){
+		this.portNum = portNum;
+		openSocket();
+	}
 	
-	private Socket openSocket(){
+	private void openSocket(){
 		try {
-			service = new ServerSocket(PORT_NUM);
+			service = new ServerSocket(portNum);
 			sock = service.accept();
 			is = new ObjectInputStream( sock.getInputStream());
-			System.out.println("Socket opened at " + PORT_NUM);
+			System.out.println("Socket opened at " + portNum);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		return sock;
 	}
 	
 	/**
@@ -55,11 +58,14 @@ public abstract class Listener implements Runnable{
 	}
 	
 
+	public Socket getSocket(){
+		return sock;
+	}
+	
 	abstract void doJob();
 	
 	@Override
 	public void run() {
-		openSocket();
 		doJob();
 		closeSocket();
 		
