@@ -8,7 +8,7 @@ public class StateManager {
 	
 	public StateManager(Adapter adapter){
 		this.adapter = adapter;
-		this.listener = new StateListener(this);
+		this.listener = new StateListener(this); // blocks until a connection is made
 		this.sender = new Sender(CAPACITY, listener.getSocket());
 	}
 	
@@ -34,6 +34,10 @@ public class StateManager {
 		state.numJobs = numJobs;
 		state.throttle = throttle;
 		sender.addToMessageQueue(state);
+	}
+	
+	public void jobDone(){
+		sender.addToMessageQueue(new PoisonPill());
 	}
 	
 	class State{

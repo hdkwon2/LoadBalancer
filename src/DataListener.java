@@ -21,17 +21,9 @@ public class DataListener extends Listener{
 		this.manager = manager;
 	}
 	
-	private void bootstrap(){
-		int left[][] = (int [][]) readObject();
-		int right[][] = (int [][])readObject();
-		
-		
-	}
 
 	@Override
 	void doJob() {
-		
-		bootstrap();
 		
 		Object obj;
 		//start listening on the data channel

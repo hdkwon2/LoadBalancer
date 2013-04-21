@@ -10,8 +10,8 @@ public class Bootstrap extends Listener{
 
 	@Override
 	void doJob() {
-		int left[][] = (int [][]) readObject();
-		int right[][] = (int [][]) readObject();
+		double left[][] = (double [][]) readObject();
+		double right[][] = (double [][]) readObject();
 		
 		adapter = new Adapter(left, right);
 		int startRow = left.length/2;
@@ -20,5 +20,27 @@ public class Bootstrap extends Listener{
 		}
 	}
 
-	
+	public Adapter getAdapter(){
+		return adapter;
+	}
+
+	public static void main(String [] args){
+		Bootstrap bootstrap = new Bootstrap();
+		bootstrap.run();
+		Adapter adapter = bootstrap.getAdapter();
+		adapter.waitForLocalWorks();
+		// wait for the remote to finish its job
+		while(!adapter.isRemoteDone()){
+			adapter.waitForRemoteWorks();
+		}
+		
+		double result [][] =adapter.getResultMatrix();
+		for(int i=0; i < result.length; i++){
+			for(int j=0; j < result[i].length; j++){
+				System.out.print(result[i][j] + " ");
+			}
+			System.out.println();
+		}
+		
+	}
 }

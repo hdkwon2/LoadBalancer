@@ -26,7 +26,11 @@ public class TransferManager {
 	}
 	
 	public void receivedData(Integer job){
-		adapter.pushWorkToQueue(job);
+//		adapter.pushWorkToQueue(job);
+	}
+	
+	public void jobDone(){
+		sender.addToMessageQueue(new PoisonPill());
 	}
 	
 	/**
@@ -43,5 +47,6 @@ public class TransferManager {
 				adapter.storeValue(row, j, matrix[row][j]);
 			}
 		}
+		adapter.setRemoteDone();
 	}
 }

@@ -1,6 +1,7 @@
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class Adapter {
@@ -8,30 +9,37 @@ public class Adapter {
 	private static final double UNDERLOAD_THRESHOLD = .5;
 	
 	BlockingQueue<Integer> workQueue; //thread-safe
-	private final int[][] leftMatrix;
-	private final int[][] rightMatrix;
-	private final int[][] resultMatrix;
+	private final double[][] leftMatrix;
+	private final double[][] rightMatrix;
+	private final double[][] resultMatrix;
 	private final TransferManager transferManager;
 	private final StateManager stateManager;
 	private final HardwareMonitor hardwareMonitor;
 	
+	private final Object lock;
+	private final Object remoteLock;
+	
+	private AtomicBoolean remoteDone = new AtomicBoolean(false);
 	private Thread worker;
-	public volatile boolean finished = false;
 	private int throttle; 
 	public int threshold;
 	
-	Adapter(int [][] left, int[][] right){
+	
+	Adapter(double [][] left, double[][] right){
 		this.leftMatrix = left;
 		this.rightMatrix = right;
 		this.workQueue = new ArrayBlockingQueue<Integer>(leftMatrix.length);
 		this.threshold = (int) (leftMatrix.length * UNDERLOAD_THRESHOLD);
-		this.resultMatrix = new int[leftMatrix.length][leftMatrix[0].length];
-		dispatchWorkThread();
-		makeJobs();		
+		this.resultMatrix = new double[leftMatrix.length][leftMatrix[0].length];
 		
 		this.transferManager = new TransferManager(this);
 		this.stateManager = new StateManager(this);
 		this.hardwareMonitor = new HardwareMonitor(this);
+		lock = new Object();
+		remoteLock = new Object();
+		
+		makeJobs();		
+		dispatchWorkThread();		
 	}
 	
 	private void makeJobs(){
@@ -45,6 +53,48 @@ public class Adapter {
 		worker.start();
 	}
 	
+	public void setRemoteDone(){
+		remoteDone.getAndSet(true);
+		synchronized(remoteLock){
+			remoteLock.notify();
+		}
+	}
+	
+	public boolean isRemoteDone(){
+		return remoteDone.get();
+	}
+	
+	public void waitForLocalWorks(){
+		synchronized (lock) {
+			try {
+				lock.wait();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		transferManager.jobDone();
+		stateManager.jobDone();
+	}
+	
+	public void waitForRemoteWorks(){
+		synchronized(remoteLock){
+			try {
+				remoteLock.wait();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public void signalDone(){
+		synchronized (lock) {
+			lock.notify();
+		}
+	}
+	
 	/**
 	 * Transfer half the difference between number of our work and their work.
 	 * @param numJobs
@@ -52,10 +102,11 @@ public class Adapter {
 	public void transferLoad(int numJobs){
 		int ourNumJobs = workQueue.size();
 		int numLoadToSend = (numJobs - ourNumJobs) /2;
-		if(numLoadToSend <= 0) return;
+		if(numLoadToSend <= 0 || isRemoteDone()) return;
 		for(int i=0; i < numLoadToSend; i++){
 			transferManager.transferData(pollFromWorkQueue());
 		}
+		System.out.println("Transfering " + numLoadToSend +" loads");
 	}
 	
 	/**
@@ -111,7 +162,7 @@ public class Adapter {
 		return work;
 	}
 	
-	public int[][] getResultMatrix(){
+	public double[][] getResultMatrix(){
 		return resultMatrix;
 	}
 	
@@ -127,11 +178,11 @@ public class Adapter {
 	/*
 	 * Call back functions for worker thread to utilize
 	 */
-	public int getValue(int r, int c){
-		return leftMatrix[r][c] + rightMatrix[r][c];
+	public double getValue(int r, int c){
+		return leftMatrix[r][c] * rightMatrix[r][c];
 	}
 	
-	public void storeValue(int r, int c, int value){
+	public void storeValue(int r, int c, double value){
 		resultMatrix[r][c] = value;
 	}
 	
@@ -154,10 +205,12 @@ public class Adapter {
 				row = adapter.pollFromWorkQueue();
 			
 				if (row == null) {
-					adapter.finished = true;
+					adapter.signalDone();
+					
+					System.out.println("Worker exiting");
 					return;
 				}
-				int sum;
+				double sum;
 				for (int i = 0; i < adapter.getRowSize(row); i++) {
 					sum = adapter.getValue(row, i);
 					adapter.storeValue(row, i, sum);

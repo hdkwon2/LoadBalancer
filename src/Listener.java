@@ -68,6 +68,6 @@ public abstract class Listener implements Runnable{
 	public void run() {
 		doJob();
 		closeSocket();
-		
+		System.out.println("Listener quitting");
 	}
 }

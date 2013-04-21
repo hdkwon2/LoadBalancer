@@ -8,14 +8,13 @@ import java.util.concurrent.TimeUnit;
 
 public class Sender implements Runnable{
 
-	private Socket sock;
+
 	protected ObjectOutputStream os;
 	private final BlockingQueue queue;
 	
 	
 	public Sender(int capacity, Socket sock){
 		queue = new ArrayBlockingQueue(capacity);
-		this.sock = sock;
 		try {
 			os = new ObjectOutputStream(sock.getOutputStream());
 		} catch (IOException e) {
@@ -69,6 +68,7 @@ public class Sender implements Runnable{
 			send(obj);
 		}
 		closeSocket();
+		System.out.println("Sender quitting");
 	}
 
 }
