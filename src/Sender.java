@@ -67,6 +67,12 @@ public class Sender implements Runnable{
 			
 			send(obj);
 		}
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		closeSocket();
 		System.out.println("Sender quitting");
 	}

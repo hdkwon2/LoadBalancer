@@ -16,11 +16,13 @@ public class StateListener extends Listener{
 		//start listening on the data channel
 		while(true){
 			obj = readObject();
-			if(obj instanceof PoisonPill){
+			if(obj instanceof PoisonPill || obj == null){
+				System.out.println("Remote is done");
+				manager.remoteDone();
 				break;
 			}
 			// add work
-			manager.receivedState((StateManager.State) obj);
+			manager.receivedState((State) obj);
 		}
 	}
 

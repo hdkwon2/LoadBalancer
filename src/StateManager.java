@@ -1,3 +1,5 @@
+import java.io.Serializable;
+
 
 public class StateManager {
 	private static final int CAPACITY = 20;
@@ -10,6 +12,9 @@ public class StateManager {
 		this.adapter = adapter;
 		this.listener = new StateListener(this); // blocks until a connection is made
 		this.sender = new Sender(CAPACITY, listener.getSocket());
+		
+		new Thread(listener).start();
+		new Thread(sender).start();
 	}
 	
 	/**
@@ -19,7 +24,7 @@ public class StateManager {
 	public void receivedState(State state){
 		int numJobs = state.numJobs;
 		if(adapter.needLoadBalancing(numJobs)){
-			
+			adapter.transferLoad(numJobs);
 		}
 	}
 	
@@ -40,8 +45,9 @@ public class StateManager {
 		sender.addToMessageQueue(new PoisonPill());
 	}
 	
-	class State{
-		int numJobs;
-		int throttle;
+	public void remoteDone(){
+		adapter.setRemoteDone();
 	}
+	
+	
 }

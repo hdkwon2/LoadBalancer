@@ -14,10 +14,6 @@ public class Bootstrap extends Listener{
 		double right[][] = (double [][]) readObject();
 		
 		adapter = new Adapter(left, right);
-		int startRow = left.length/2;
-		for(int i=startRow; i< left.length; i++){
-			adapter.pushWorkToQueue(i);
-		}
 	}
 
 	public Adapter getAdapter(){

@@ -1,4 +1,11 @@
+import java.io.Serializable;
 
-public class PoisonPill {
+
+public class PoisonPill implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 
 }

@@ -1,3 +1,5 @@
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -20,7 +22,7 @@ public class Adapter {
 	private final Object remoteLock;
 	
 	private AtomicBoolean remoteDone = new AtomicBoolean(false);
-	private Thread worker;
+	private WorkThread worker;
 	private int throttle; 
 	public int threshold;
 	
@@ -43,18 +45,20 @@ public class Adapter {
 	}
 	
 	private void makeJobs(){
-		for(int i=0; i < leftMatrix.length; i++){
+		int myHalf = leftMatrix.length/2;
+		for(int i=myHalf; i < leftMatrix.length; i++){
 			workQueue.add(i);
 		}
 	}
 	
 	private void dispatchWorkThread(){
-		worker = new Thread(new WorkThread(this));
-		worker.start();
+		worker = new WorkThread(this);
+		new Thread(worker).start();
 	}
 	
 	public void setRemoteDone(){
 		remoteDone.getAndSet(true);
+		transferManager.jobDone();
 		synchronized(remoteLock){
 			remoteLock.notify();
 		}
@@ -73,9 +77,6 @@ public class Adapter {
 				e.printStackTrace();
 			}
 		}
-		
-		transferManager.jobDone();
-		stateManager.jobDone();
 	}
 	
 	public void waitForRemoteWorks(){
@@ -93,6 +94,8 @@ public class Adapter {
 		synchronized (lock) {
 			lock.notify();
 		}
+
+		stateManager.jobDone();
 	}
 	
 	/**
@@ -118,7 +121,7 @@ public class Adapter {
 	 */
 	public boolean needLoadBalancing(int numJobs){
 		int ourNumJobs = workQueue.size();
-		return (numJobs < ourNumJobs && ourNumJobs > threshold);  
+		return (numJobs < ourNumJobs/* && ourNumJobs > threshold*/);  
 	}
 	
 	public int getNumberOfWork(){
@@ -147,7 +150,7 @@ public class Adapter {
 	public Integer pollFromWorkQueue(){
 		Integer work = null;
 		try {
-			work = workQueue.poll(5, TimeUnit.SECONDS);
+			work = workQueue.poll(10, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -171,15 +174,21 @@ public class Adapter {
 	 * @param t new throttle value set by user
 	 */
 	public void setThrottle(int t){
-		this.throttle = t;
+		worker.setThrottle(t);
 	}
 	
 /*********************************************************/
 	/*
 	 * Call back functions for worker thread to utilize
 	 */
-	public double getValue(int r, int c){
-		return leftMatrix[r][c] * rightMatrix[r][c];
+	public double doWork(int r, int c){
+		double sum = 0;
+		for(int i=0; i < leftMatrix[r].length; i++){
+			for(int j=0; j < rightMatrix.length; j++){
+				sum +=leftMatrix[r][i] * rightMatrix[j][c];
+			}
+		}
+		return sum;
 	}
 	
 	public void storeValue(int r, int c, double value){
@@ -193,18 +202,26 @@ public class Adapter {
 	static class WorkThread implements Runnable{
 
 		Adapter adapter;
+		int throttle;
+		long runTime;
 		
 		public WorkThread(Adapter adapter){
 			this.adapter = adapter;
+			throttle = 0;
+		}
+		
+		public void setThrottle(int v){
+			throttle = v;
 		}
 		
 		@Override
 		public void run() {
 			while (true) {
+				long begin = System.nanoTime();
 				Integer row;
 				row = adapter.pollFromWorkQueue();
 			
-				if (row == null) {
+				if (row == null) { // work is done
 					adapter.signalDone();
 					
 					System.out.println("Worker exiting");
@@ -212,8 +229,15 @@ public class Adapter {
 				}
 				double sum;
 				for (int i = 0; i < adapter.getRowSize(row); i++) {
-					sum = adapter.getValue(row, i);
+					sum = adapter.doWork(row, i);
 					adapter.storeValue(row, i, sum);
+				}
+				runTime = (System.nanoTime() - begin) / 1000000;
+				try {
+					Thread.sleep(runTime * throttle / 100);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 			}
 		}

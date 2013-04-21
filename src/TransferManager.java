@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 
 public class TransferManager {
 
@@ -26,11 +28,13 @@ public class TransferManager {
 	}
 	
 	public void receivedData(Integer job){
-//		adapter.pushWorkToQueue(job);
+		System.out.println("Received " + job +" from remote");
+		adapter.pushWorkToQueue(job);
 	}
 	
 	public void jobDone(){
-		sender.addToMessageQueue(new PoisonPill());
+//		System.out.println("Transfer channel: Sent flag");
+//		sender.addToMessageQueue(new PoisonPill());
 	}
 	
 	/**
@@ -39,14 +43,14 @@ public class TransferManager {
 	 * @param matrix
 	 * @param rows
 	 */
-	public void listenerFinished(int [][] matrix, int [] rows){
-		for(int i=0; i < rows.length; i++){
-			int row = rows[i];
+	public void listenerFinished(double [][] matrix, ArrayList rows){
+		sender.addToMessageQueue(new PoisonPill());
+		for(int i=0; i < rows.size() - 1; i++){
+			int row = (int) rows.get(i);
 			for(int j=0; j < matrix[row].length; j++){
 				// copy the result over to our local result
 				adapter.storeValue(row, j, matrix[row][j]);
 			}
 		}
-		adapter.setRemoteDone();
 	}
 }

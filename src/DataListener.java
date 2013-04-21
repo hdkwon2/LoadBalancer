@@ -1,7 +1,4 @@
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.ArrayList;
 
 
 /**
@@ -29,11 +26,11 @@ public class DataListener extends Listener{
 		//start listening on the data channel
 		while(true){
 			obj = readObject();
-			if(obj instanceof PoisonPill){
+			if(obj instanceof PoisonPill | obj == null){
+				if(obj instanceof PoisonPill) System.out.println("Received poison");
 				// All jobs done
-				int result[][] = (int [][])readObject();
-				int rows[] = (int [])readObject();
-				
+				double result[][] = (double [][])readObject();
+				ArrayList rows =  (ArrayList)readObject();
 				manager.listenerFinished(result, rows);
 				break;
 			}
