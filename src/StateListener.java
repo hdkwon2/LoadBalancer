@@ -18,7 +18,6 @@ public class StateListener extends Listener{
 			obj = readObject();
 			if(obj instanceof PoisonPill || obj == null){
 				System.out.println("Remote is done");
-				manager.remoteDone();
 				break;
 			}
 			// add work

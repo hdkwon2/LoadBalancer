@@ -6,11 +6,11 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 
-public class Sender implements Runnable{
+public abstract class Sender implements Runnable{
 
 
 	protected ObjectOutputStream os;
-	private final BlockingQueue queue;
+	protected final BlockingQueue queue;
 	
 	
 	public Sender(int capacity, Socket sock){
@@ -23,7 +23,7 @@ public class Sender implements Runnable{
 		}
 	}
 	
-	private void send(Object obj){
+	protected void send(Object obj){
 		try {
 			os.writeObject(obj);
 		} catch (IOException e) {
@@ -49,32 +49,11 @@ public class Sender implements Runnable{
 		}
 	}
 	
+	abstract void doJob();
+	
 	@Override
 	public void run() {
-		
-		Object obj = null;
-		while(true){
-			try {
-				obj = queue.poll(10, TimeUnit.SECONDS);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			if(obj instanceof PoisonPill){
-				send(new PoisonPill());
-				break;
-			}
-			
-			send(obj);
-		}
-		try {
-			Thread.sleep(10);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		doJob();
 		closeSocket();
-		System.out.println("Sender quitting");
 	}
-
 }

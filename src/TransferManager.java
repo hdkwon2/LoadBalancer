@@ -7,13 +7,15 @@ public class TransferManager {
 	
 	private final Adapter adapter;
 	private final DataListener listener;
-	private final Sender sender;
+	private final DataSender sender;
+	private final Object lock;
 	
 	public TransferManager(Adapter adapter){
 		
 		this.adapter = adapter;
+		this.lock = new Object();
 		listener = new DataListener(this); // blocks until a connection is made
-		sender = new Sender(CAPACITY, listener.getSocket());
+		sender = new DataSender(CAPACITY, listener.getSocket());
 		
 		new Thread(listener).start();
 		new Thread(sender).start();
@@ -24,6 +26,7 @@ public class TransferManager {
 	 * @param job
 	 */
 	public void transferData(Integer job){
+		System.err.println("Transfering " + job);
 		sender.addToMessageQueue(job);
 	}
 	
@@ -33,8 +36,8 @@ public class TransferManager {
 	}
 	
 	public void jobDone(){
-//		System.out.println("Transfer channel: Sent flag");
-//		sender.addToMessageQueue(new PoisonPill());
+		// Triggers aggregate phase
+		sender.addToMessageQueue(new PoisonPill(PoisonPill.TRIGGER_AGGREGATE));
 	}
 	
 	/**

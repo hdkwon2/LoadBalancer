@@ -10,7 +10,7 @@ public class Adapter {
 
 	private static final double UNDERLOAD_THRESHOLD = .5;
 	
-	BlockingQueue<Integer> workQueue; //thread-safe
+	BlockingQueue workQueue; //thread-safe
 	private final double[][] leftMatrix;
 	private final double[][] rightMatrix;
 	private final double[][] resultMatrix;
@@ -30,7 +30,7 @@ public class Adapter {
 	Adapter(double [][] left, double[][] right){
 		this.leftMatrix = left;
 		this.rightMatrix = right;
-		this.workQueue = new ArrayBlockingQueue<Integer>(leftMatrix.length);
+		this.workQueue = new ArrayBlockingQueue(leftMatrix.length);
 		this.threshold = (int) (leftMatrix.length * UNDERLOAD_THRESHOLD);
 		this.resultMatrix = new double[leftMatrix.length][leftMatrix[0].length];
 		
@@ -56,11 +56,16 @@ public class Adapter {
 		new Thread(worker).start();
 	}
 	
+	/**
+	 * Remote node is done, and we did not send more work to them.
+	 * Can safely kill work thread.
+	 */
 	public void setRemoteDone(){
-		remoteDone.getAndSet(true);
-		transferManager.jobDone();
-		synchronized(remoteLock){
-			remoteLock.notify();
+		remoteDone.set(true);
+		try {
+			workQueue.put(new PoisonPill(PoisonPill.WORK_DONE));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -90,26 +95,34 @@ public class Adapter {
 		}
 	}
 	
+	/**
+	 * At this state, remote node is done, our job is done.
+	 * 
+	 * Signals the main thread, and initiates close handshake. 
+	 */
 	public void signalDone(){
+		
+		stateManager.jobDone();
 		synchronized (lock) {
 			lock.notify();
 		}
 
-		stateManager.jobDone();
+		
 	}
 	
 	/**
 	 * Transfer half the difference between number of our work and their work.
 	 * @param numJobs
 	 */
-	public void transferLoad(int numJobs){
+	public int transferLoad(int numJobs){
 		int ourNumJobs = workQueue.size();
 		int numLoadToSend = (numJobs - ourNumJobs) /2;
-		if(numLoadToSend <= 0 || isRemoteDone()) return;
+		if(numLoadToSend <= 0 || isRemoteDone()) return 0;
 		for(int i=0; i < numLoadToSend; i++){
-			transferManager.transferData(pollFromWorkQueue());
+			transferManager.transferData((Integer) pollFromWorkQueue());
 		}
-		System.out.println("Transfering " + numLoadToSend +" loads");
+		
+		return numLoadToSend;
 	}
 	
 	/**
@@ -147,14 +160,15 @@ public class Adapter {
 	 * @return
 	 * @throws InterruptedException
 	 */
-	public Integer pollFromWorkQueue(){
-		Integer work = null;
+	public Object pollFromWorkQueue(){
+		Object work = null;
 		try {
-			work = workQueue.poll(10, TimeUnit.SECONDS);
+			work = workQueue.poll(Integer.MAX_VALUE, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		if(work instanceof PoisonPill) return work;
 		
 		int workNum = workQueue.size();
 		// went below the threshold, send the state
@@ -218,15 +232,17 @@ public class Adapter {
 		public void run() {
 			while (true) {
 				long begin = System.nanoTime();
-				Integer row;
-				row = adapter.pollFromWorkQueue();
+				Object work;
+				work = adapter.pollFromWorkQueue();
 			
-				if (row == null) { // work is done
+				/* Work is done */
+				if (work instanceof PoisonPill) {
 					adapter.signalDone();
-					
 					System.out.println("Worker exiting");
 					return;
 				}
+				
+				Integer row = (Integer) work;
 				double sum;
 				for (int i = 0; i < adapter.getRowSize(row); i++) {
 					sum = adapter.doWork(row, i);
@@ -236,7 +252,6 @@ public class Adapter {
 				try {
 					Thread.sleep(runTime * throttle / 100);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}

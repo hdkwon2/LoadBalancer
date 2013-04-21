@@ -11,7 +11,7 @@ public class StateManager {
 	public StateManager(Adapter adapter){
 		this.adapter = adapter;
 		this.listener = new StateListener(this); // blocks until a connection is made
-		this.sender = new Sender(CAPACITY, listener.getSocket());
+		this.sender = new StateSender(CAPACITY, listener.getSocket());
 		
 		new Thread(listener).start();
 		new Thread(sender).start();
@@ -23,8 +23,18 @@ public class StateManager {
 	 */
 	public void receivedState(State state){
 		int numJobs = state.numJobs;
+		
+		
 		if(adapter.needLoadBalancing(numJobs)){
-			adapter.transferLoad(numJobs);
+			int sent;
+			sent = adapter.transferLoad(numJobs);
+			
+			if(sent >0) return;
+		}
+		
+		if(numJobs == 0){
+			/* remote is done, we are almost done */
+			adapter.setRemoteDone();
 		}
 	}
 	
@@ -41,12 +51,13 @@ public class StateManager {
 		sender.addToMessageQueue(state);
 	}
 	
+	/**
+	 * At this state, remote is done, we are done.
+	 * Safe to kill state manager.
+	 */
 	public void jobDone(){
-		sender.addToMessageQueue(new PoisonPill());
-	}
-	
-	public void remoteDone(){
-		adapter.setRemoteDone();
+		// kills the sender
+		sender.addToMessageQueue(new PoisonPill(PoisonPill.WORK_DONE));
 	}
 	
 	
