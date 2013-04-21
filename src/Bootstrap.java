@@ -1,3 +1,6 @@
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+
 
 public class Bootstrap extends Listener{
 
@@ -25,10 +28,6 @@ public class Bootstrap extends Listener{
 		bootstrap.run();
 		Adapter adapter = bootstrap.getAdapter();
 		adapter.waitForLocalWorks();
-		// wait for the remote to finish its job
-		while(!adapter.isRemoteDone()){
-			adapter.waitForRemoteWorks();
-		}
 		
 		double result [][] =adapter.getResultMatrix();
 		for(int i=0; i < result.length; i++){
@@ -36,7 +35,6 @@ public class Bootstrap extends Listener{
 				System.out.print(result[i][j] + " ");
 			}
 			System.out.println();
-		}
-		
+		}		
 	}
 }

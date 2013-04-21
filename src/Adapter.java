@@ -19,7 +19,6 @@ public class Adapter {
 	private final HardwareMonitor hardwareMonitor;
 	
 	private final Object lock;
-	private final Object remoteLock;
 	
 	private AtomicBoolean remoteDone = new AtomicBoolean(false);
 	private WorkThread worker;
@@ -38,7 +37,6 @@ public class Adapter {
 		this.stateManager = new StateManager(this);
 		this.hardwareMonitor = new HardwareMonitor(this);
 		lock = new Object();
-		remoteLock = new Object();
 		
 		makeJobs();		
 		dispatchWorkThread();		
@@ -84,17 +82,6 @@ public class Adapter {
 		}
 	}
 	
-	public void waitForRemoteWorks(){
-		synchronized(remoteLock){
-			try {
-				remoteLock.wait();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
-	
 	/**
 	 * At this state, remote node is done, our job is done.
 	 * 
@@ -102,12 +89,12 @@ public class Adapter {
 	 */
 	public void signalDone(){
 		
-		stateManager.jobDone();
+		stateManager.jobDone(new PoisonPill(PoisonPill.DONT_KILL));
+		transferManager.jobDone(new PoisonPill(PoisonPill.TRIGGER_AGGREGATE));
+		
 		synchronized (lock) {
 			lock.notify();
 		}
-
-		
 	}
 	
 	/**
@@ -238,7 +225,7 @@ public class Adapter {
 				/* Work is done */
 				if (work instanceof PoisonPill) {
 					adapter.signalDone();
-					System.out.println("Worker exiting");
+					System.err.println("Worker exiting");
 					return;
 				}
 				

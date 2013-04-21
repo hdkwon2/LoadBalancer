@@ -17,7 +17,14 @@ public class StateListener extends Listener{
 		while(true){
 			obj = readObject();
 			if(obj instanceof PoisonPill || obj == null){
-				System.out.println("Remote is done");
+				/* give some time for the other node to get the poisonPill */
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				manager.jobDone(new PoisonPill(PoisonPill.WORK_DONE));
+				System.err.println("StateListener exiting");
 				break;
 			}
 			// add work

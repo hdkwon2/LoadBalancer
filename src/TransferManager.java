@@ -35,9 +35,9 @@ public class TransferManager {
 		adapter.pushWorkToQueue(job);
 	}
 	
-	public void jobDone(){
+	public void jobDone(PoisonPill pill){
 		// Triggers aggregate phase
-		sender.addToMessageQueue(new PoisonPill(PoisonPill.TRIGGER_AGGREGATE));
+		sender.addToMessageQueue(pill);
 	}
 	
 	/**
@@ -47,13 +47,13 @@ public class TransferManager {
 	 * @param rows
 	 */
 	public void listenerFinished(double [][] matrix, ArrayList rows){
-		sender.addToMessageQueue(new PoisonPill());
-		for(int i=0; i < rows.size() - 1; i++){
-			int row = (int) rows.get(i);
-			for(int j=0; j < matrix[row].length; j++){
-				// copy the result over to our local result
-				adapter.storeValue(row, j, matrix[row][j]);
-			}
-		}
+//		sender.addToMessageQueue(new PoisonPill());
+//		for(int i=0; i < rows.size() - 1; i++){
+//			int row = (int) rows.get(i);
+//			for(int j=0; j < matrix[row].length; j++){
+//				// copy the result over to our local result
+//				adapter.storeValue(row, j, matrix[row][j]);
+//			}
+//		}
 	}
 }

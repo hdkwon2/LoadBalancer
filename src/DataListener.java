@@ -26,12 +26,19 @@ public class DataListener extends Listener{
 		//start listening on the data channel
 		while(true){
 			obj = readObject();
-			if(obj instanceof PoisonPill | obj == null){
-				if(obj instanceof PoisonPill) System.out.println("Received poison");
-				// All jobs done
-				double result[][] = (double [][])readObject();
-				ArrayList rows =  (ArrayList)readObject();
-				manager.listenerFinished(result, rows);
+			if(obj instanceof PoisonPill){
+				
+//				// All jobs done
+//				double result[][] = (double [][])readObject();
+//				ArrayList rows =  (ArrayList)readObject();
+//				manager.listenerFinished(result, rows);
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				manager.jobDone(new PoisonPill(PoisonPill.WORK_DONE));
+				System.err.println("DataListener exiting");
 				break;
 			}
 			// add work

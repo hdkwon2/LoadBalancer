@@ -24,7 +24,6 @@ public class StateManager {
 	public void receivedState(State state){
 		int numJobs = state.numJobs;
 		
-		
 		if(adapter.needLoadBalancing(numJobs)){
 			int sent;
 			sent = adapter.transferLoad(numJobs);
@@ -55,9 +54,9 @@ public class StateManager {
 	 * At this state, remote is done, we are done.
 	 * Safe to kill state manager.
 	 */
-	public void jobDone(){
+	public void jobDone(PoisonPill pill){
 		// kills the sender
-		sender.addToMessageQueue(new PoisonPill(PoisonPill.WORK_DONE));
+		sender.addToMessageQueue(pill);
 	}
 	
 	

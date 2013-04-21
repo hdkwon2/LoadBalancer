@@ -10,6 +10,7 @@ public class PoisonPill implements Serializable {
 
 	public static final int WORK_DONE = 0;
 	public static final int TRIGGER_AGGREGATE =1;
+	public static final int DONT_KILL = 2;
 	
 	private final int state;
 	

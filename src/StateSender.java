@@ -19,12 +19,16 @@ public class StateSender extends Sender{
 				e.printStackTrace();
 			}
 			
-			send(obj);
-			
 			if(obj instanceof PoisonPill){
+				PoisonPill pill = (PoisonPill) obj;
+				if(pill.getState() == PoisonPill.DONT_KILL){
+					send(obj);
+					continue;
+				}
 				System.err.println("StateSender exiting");
 				break;
 			}
+			send(obj);
 		}
 	}
 
