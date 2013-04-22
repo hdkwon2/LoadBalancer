@@ -22,7 +22,7 @@ public abstract class Listener implements Runnable{
 			service = new ServerSocket(portNum);
 			sock = service.accept();
 			is = new ObjectInputStream( sock.getInputStream());
-			System.out.println("Socket opened at " + portNum);
+			System.err.println("Socket opened at " + portNum);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -50,7 +50,6 @@ public abstract class Listener implements Runnable{
 			is.close();
 			sock.close();
 			service.close();
-			System.out.println("Socket closed");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -1,14 +1,13 @@
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class Adapter {
 
-	private static final double UNDERLOAD_THRESHOLD = .5;
+	private static final double UNDERLOAD_THRESHOLD = .3;
 	
 	BlockingQueue workQueue; //thread-safe
 	private final double[][] leftMatrix;
@@ -84,17 +83,17 @@ public class Adapter {
 	
 	/**
 	 * At this state, remote node is done, our job is done.
-	 * 
 	 * Signals the main thread, and initiates close handshake. 
 	 */
-	public void signalDone(){
-		
-		stateManager.jobDone(new PoisonPill(PoisonPill.DONT_KILL));
-		transferManager.jobDone(new PoisonPill(PoisonPill.TRIGGER_AGGREGATE));
-		
+	public void signalDone() {
 		synchronized (lock) {
 			lock.notify();
 		}
+	}
+	
+	public void startAggregation(){
+		stateManager.jobDone(new PoisonPill(PoisonPill.DONT_KILL));
+		hardwareMonitor.jobDone();
 	}
 	
 	/**
@@ -103,7 +102,7 @@ public class Adapter {
 	 */
 	public int transferLoad(int numJobs){
 		int ourNumJobs = workQueue.size();
-		int numLoadToSend = (numJobs - ourNumJobs) /2;
+		int numLoadToSend = (ourNumJobs - numJobs) /2;
 		if(numLoadToSend <= 0 || isRemoteDone()) return 0;
 		for(int i=0; i < numLoadToSend; i++){
 			transferManager.transferData((Integer) pollFromWorkQueue());
@@ -121,7 +120,7 @@ public class Adapter {
 	 */
 	public boolean needLoadBalancing(int numJobs){
 		int ourNumJobs = workQueue.size();
-		return (numJobs < ourNumJobs/* && ourNumJobs > threshold*/);  
+		return (numJobs < ourNumJobs && ourNumJobs > threshold);  
 	}
 	
 	public int getNumberOfWork(){
@@ -155,12 +154,10 @@ public class Adapter {
 			e.printStackTrace();
 		}
 		
-		if(work instanceof PoisonPill) return work;
-		
 		int workNum = workQueue.size();
 		// went below the threshold, send the state
 		if(workNum <= threshold){
-			stateManager.sendState(workNum, this.throttle);
+			stateManager.sendState(workNum, this.throttle, hardwareMonitor.getCPUUsage());
 		}
 		
 		return work;
@@ -203,16 +200,17 @@ public class Adapter {
 	static class WorkThread implements Runnable{
 
 		Adapter adapter;
-		int throttle;
+		AtomicInteger throttle;
 		long runTime;
 		
 		public WorkThread(Adapter adapter){
 			this.adapter = adapter;
-			throttle = 0;
+			throttle = new AtomicInteger(50);
 		}
 		
 		public void setThrottle(int v){
-			throttle = v;
+			throttle.set(v);
+			System.out.println("Setting throttle to " + v);
 		}
 		
 		@Override
@@ -224,7 +222,7 @@ public class Adapter {
 			
 				/* Work is done */
 				if (work instanceof PoisonPill) {
-					adapter.signalDone();
+					adapter.startAggregation();
 					System.err.println("Worker exiting");
 					return;
 				}
@@ -237,7 +235,7 @@ public class Adapter {
 				}
 				runTime = (System.nanoTime() - begin) / 1000000;
 				try {
-					Thread.sleep(runTime * throttle / 100);
+					Thread.sleep(runTime *(100- throttle.get()) / 100);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}

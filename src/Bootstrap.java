@@ -1,5 +1,5 @@
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 
 
 public class Bootstrap extends Listener{
@@ -23,6 +23,22 @@ public class Bootstrap extends Listener{
 		return adapter;
 	}
 
+	public static void writeToFile(double [][] result){
+		FileWriter fw = null;
+		try {
+			fw = new FileWriter("out/result.txt");
+			for(int i=0; i < result.length; i++){
+				for(int j=0; j < result[i].length; j++){
+					fw.write(result[i][j] + " ");
+				}
+				fw.write("\n");
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
+	}
+	
 	public static void main(String [] args){
 		Bootstrap bootstrap = new Bootstrap();
 		bootstrap.run();
@@ -30,11 +46,6 @@ public class Bootstrap extends Listener{
 		adapter.waitForLocalWorks();
 		
 		double result [][] =adapter.getResultMatrix();
-		for(int i=0; i < result.length; i++){
-			for(int j=0; j < result[i].length; j++){
-				System.out.print(result[i][j] + " ");
-			}
-			System.out.println();
-		}		
+		Bootstrap.writeToFile(result);		
 	}
 }

@@ -23,7 +23,8 @@ public class DataSender extends Sender{
 			if(obj instanceof PoisonPill){
 				PoisonPill pill = (PoisonPill) obj;
 				
-				if(pill.getState() == PoisonPill.TRIGGER_AGGREGATE){
+				if(pill.getState() == PoisonPill.DONT_KILL){
+					System.out.println("here");
 					// Wait until receiver receives results from the remote
 					send(obj);
 					continue;

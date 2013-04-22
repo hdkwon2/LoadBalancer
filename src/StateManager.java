@@ -43,10 +43,11 @@ public class StateManager {
 	 * @param numJobs
 	 * @param throttle
 	 */
-	public void sendState(int numJobs, int throttle){
+	public void sendState(int numJobs, int throttle, int cpuUsage){
 		State state = new State();
 		state.numJobs = numJobs;
 		state.throttle = throttle;
+		state.cpuUsage = cpuUsage;
 		sender.addToMessageQueue(state);
 	}
 	

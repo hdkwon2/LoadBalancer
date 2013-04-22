@@ -25,7 +25,7 @@ public class UserInputReader implements Runnable {
 				e.printStackTrace();
 			}
 			if(input.equals("quit")){
-				System.out.println("User input reader exiting");
+				System.err.println("User input reader exiting");
 				break;
 			}
 			monitor.setThrottleValue(Integer.parseInt(input));
